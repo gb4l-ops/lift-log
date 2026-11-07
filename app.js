@@ -73,6 +73,18 @@ let view = "home";
 let activeId = null;
 let saveError = "";
 
+const REST_PRESETS = [60, 90, 120, 180];
+let rest = {
+  durationSec: 90,
+  endsAt: null,
+  remainingMs: 0,
+  status: "idle",
+  tickId: null
+};
+let restHintUntil = 0;
+let audioCtx = null;
+let wakeLock = null;
+
 function uid() {
   if (crypto.randomUUID) return crypto.randomUUID();
   return "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
@@ -123,7 +135,12 @@ function load() {
     if (!raw) return { sessions: [] };
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.sessions)) return { sessions: [] };
-    return parsed;
+    const restSec = Number(parsed.restSec);
+    const out = { sessions: parsed.sessions };
+    if (Number.isFinite(restSec) && restSec >= 15) {
+      out.restSec = Math.min(3600, Math.round(restSec));
+    }
+    return out;
   } catch (err) {
     saveError = "Could not read saved workouts on this phone.";
     return { sessions: [] };
@@ -370,6 +387,247 @@ function nudge(value, delta, min) {
   return String(Math.max(min, next));
 }
 
+function formatRest(ms) {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return minutes + ":" + String(seconds).padStart(2, "0");
+}
+
+function remainingMs() {
+  if (rest.status === "running" && rest.endsAt) return Math.max(0, rest.endsAt - Date.now());
+  if (rest.status === "paused") return Math.max(0, rest.remainingMs || 0);
+  return Math.max(0, (rest.durationSec || 90) * 1000);
+}
+
+function restVisible() {
+  if (rest.status !== "idle") return true;
+  if (view !== "session") return false;
+  const session = activeSession();
+  return !!(session && !session.finishedAt);
+}
+
+function unlockAudio() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    if (!audioCtx) audioCtx = new Ctx();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  } catch (err) {
+    /* older phones may block Web Audio */
+  }
+}
+
+function beepDone() {
+  try {
+    unlockAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    [0, 0.22, 0.44].forEach((offset, index) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 880 + index * 220;
+      gain.gain.setValueAtTime(0.0001, now + offset);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + offset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.18);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.2);
+    });
+  } catch (err) {
+    /* beep is optional */
+  }
+}
+
+async function requestWake() {
+  try {
+    if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request("screen");
+  } catch (err) {
+    wakeLock = null;
+  }
+}
+
+function releaseWake() {
+  if (!wakeLock) return;
+  wakeLock.release().catch(() => {});
+  wakeLock = null;
+}
+
+function stopTick() {
+  if (rest.tickId) {
+    clearInterval(rest.tickId);
+    rest.tickId = null;
+  }
+}
+
+function startTick() {
+  stopTick();
+  rest.tickId = setInterval(syncRest, 200);
+}
+
+function setRestDuration(sec) {
+  const next = Math.max(15, Math.min(3600, Math.round(Number(sec) || 90)));
+  rest.durationSec = next;
+  db.restSec = next;
+  persist();
+  if (rest.status === "idle") renderRest();
+}
+
+function addRest(deltaSec) {
+  if (rest.status === "running") {
+    rest.endsAt = Math.max(Date.now(), (rest.endsAt || Date.now()) + deltaSec * 1000);
+    updateRestClock();
+    return;
+  }
+  if (rest.status === "paused") {
+    rest.remainingMs = Math.max(15000, (rest.remainingMs || 0) + deltaSec * 1000);
+    renderRest();
+    return;
+  }
+  setRestDuration((rest.durationSec || 90) + deltaSec);
+}
+
+function updateRestClock() {
+  const timeEl = document.getElementById("rest-time");
+  if (rest.status === "done") {
+    if (timeEl) timeEl.textContent = "REST OVER";
+    document.title = "REST OVER · Lift Log";
+    return;
+  }
+  const label = formatRest(remainingMs());
+  if (timeEl) timeEl.textContent = label;
+  if (rest.status === "running") document.title = label + " · Lift Log";
+  else if (rest.status === "paused") document.title = label + " paused · Lift Log";
+  else document.title = "Lift Log";
+}
+
+function syncRest() {
+  if (rest.status !== "running") return;
+  if (remainingMs() <= 0) {
+    finishRest();
+    return;
+  }
+  updateRestClock();
+}
+
+function finishRest() {
+  rest.status = "done";
+  rest.endsAt = null;
+  rest.remainingMs = 0;
+  stopTick();
+  releaseWake();
+  beepDone();
+  try {
+    if (navigator.vibrate) navigator.vibrate([250, 120, 250, 120, 500]);
+  } catch (err) {
+    /* iPhone ignores vibrate */
+  }
+  renderRest();
+}
+
+function startRest() {
+  unlockAudio();
+  const ms = rest.status === "paused" ? rest.remainingMs : rest.durationSec * 1000;
+  if (!ms || ms <= 0) return;
+  rest.endsAt = Date.now() + ms;
+  rest.status = "running";
+  restHintUntil = 0;
+  requestWake();
+  startTick();
+  renderRest();
+}
+
+function pauseRest() {
+  if (rest.status !== "running") return;
+  rest.remainingMs = remainingMs();
+  rest.endsAt = null;
+  rest.status = "paused";
+  stopTick();
+  releaseWake();
+  renderRest();
+}
+
+function resetRest() {
+  rest.status = "idle";
+  rest.endsAt = null;
+  rest.remainingMs = 0;
+  restHintUntil = 0;
+  stopTick();
+  releaseWake();
+  document.title = "Lift Log";
+  renderRest();
+}
+
+function hintRest() {
+  restHintUntil = Date.now() + 4000;
+  renderRest();
+  setTimeout(() => {
+    if (Date.now() >= restHintUntil) renderRest();
+  }, 4100);
+}
+
+function renderRest() {
+  const root = document.getElementById("rest-root");
+  if (!root) return;
+  const show = restVisible();
+  document.body.classList.toggle("has-rest", show);
+  if (!show) {
+    root.innerHTML = "";
+    if (rest.status === "idle") document.title = "Lift Log";
+    return;
+  }
+
+  const status = rest.status;
+  const hint = status === "idle" && Date.now() < restHintUntil;
+  let inner = `<div class="rest-bar ${esc(status)}" id="rest-bar">`;
+
+  if (status === "done") {
+    inner += `
+      <div class="rest-label">Rest timer</div>
+      <div class="rest-time" id="rest-time">REST OVER</div>
+      <div class="rest-actions">
+        <button type="button" class="btn primary" data-act="rest-start">Start rest again</button>
+        <button type="button" class="btn ghost" data-act="rest-reset">Dismiss</button>
+      </div>
+    `;
+  } else if (status === "running" || status === "paused") {
+    inner += `
+      <div class="rest-label">${status === "paused" ? "Rest paused" : "Resting"}</div>
+      <div class="rest-time" id="rest-time">${esc(formatRest(remainingMs()))}</div>
+      <div class="rest-actions">
+        ${status === "running"
+          ? `<button type="button" class="btn" data-act="rest-pause">Pause</button>`
+          : `<button type="button" class="btn primary" data-act="rest-start">Resume</button>`}
+        <button type="button" class="btn rest-adjust" data-act="rest-plus">+15s</button>
+        <button type="button" class="btn ghost" data-act="rest-reset">Reset</button>
+      </div>
+    `;
+  } else {
+    const chips = REST_PRESETS.map((sec) => {
+      const pretty = sec === 60 ? "60s" : sec === 90 ? "90s" : sec === 120 ? "2 min" : "3 min";
+      return `<button type="button" class="${rest.durationSec === sec ? "on" : ""}" data-act="rest-preset" data-sec="${sec}">${pretty}</button>`;
+    }).join("");
+    inner += `
+      <div class="rest-head">
+        <span class="rest-label">Rest timer</span>
+        <span class="rest-time" id="rest-time">${esc(formatRest(rest.durationSec * 1000))}</span>
+      </div>
+      <div class="rest-presets">${chips}</div>
+      <div class="rest-actions">
+        <button type="button" class="btn rest-adjust" data-act="rest-minus">−15</button>
+        <button type="button" class="btn primary${hint ? " hint" : ""}" data-act="rest-start">Start rest</button>
+        <button type="button" class="btn rest-adjust" data-act="rest-plus">+15</button>
+      </div>
+    `;
+  }
+
+  inner += `</div>`;
+  root.innerHTML = inner;
+  updateRestClock();
+}
+
 function bind() {
   const app = document.getElementById("app");
   app.onclick = (event) => {
@@ -413,6 +671,7 @@ function bind() {
       exercise.sets.push(emptySet(exercise));
       persist();
       render();
+      hintRest();
     } else if (act === "del-set" && exercise && set) {
       exercise.sets = exercise.sets.filter((item) => item.id !== set.id);
       persist();
@@ -627,6 +886,7 @@ function render() {
   const y = window.scrollY;
   app.innerHTML = view === "session" ? renderSession() : renderHome();
   window.scrollTo(0, y);
+  renderRest();
 }
 
 function registerWorker() {
@@ -635,6 +895,30 @@ function registerWorker() {
 }
 
 db = load();
+if (db.restSec) rest.durationSec = db.restSec;
 bind();
+const restRoot = document.getElementById("rest-root");
+if (restRoot) {
+  restRoot.onclick = (event) => {
+    const btn = event.target.closest("[data-act]");
+    if (!btn) return;
+    const act = btn.dataset.act;
+    if (act === "rest-preset") setRestDuration(Number(btn.dataset.sec));
+    else if (act === "rest-start") startRest();
+    else if (act === "rest-pause") pauseRest();
+    else if (act === "rest-reset") resetRest();
+    else if (act === "rest-plus") addRest(15);
+    else if (act === "rest-minus") addRest(-15);
+  };
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  if (rest.status === "running") {
+    syncRest();
+    requestWake();
+  } else if (rest.status === "done") {
+    renderRest();
+  }
+});
 render();
 registerWorker();

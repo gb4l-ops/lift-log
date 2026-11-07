@@ -220,3 +220,133 @@ hr.sep {
   border-top: 1px solid var(--line);
   margin: 22px 0 14px;
 }
+
+body.has-rest {
+  padding-bottom: calc(210px + env(safe-area-inset-bottom));
+}
+
+#rest-root:empty { display: none; }
+
+.rest-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  background: #171c21;
+  border-top: 1px solid var(--line);
+  padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.rest-bar.running {
+  background: #14241d;
+  border-top-color: var(--accent);
+}
+
+.rest-bar.paused {
+  background: #241f14;
+  border-top-color: var(--warn);
+}
+
+.rest-bar.done {
+  background: #3d2a08;
+  border-top-color: var(--warn);
+  animation: rest-flash 0.55s ease-in-out infinite alternate;
+}
+
+@keyframes rest-flash {
+  from { background: #3d2a08; }
+  to { background: #7a4e0c; }
+}
+
+.rest-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.rest-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.rest-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-size: 1.15rem;
+}
+
+.rest-bar.running .rest-time,
+.rest-bar.paused .rest-time {
+  display: block;
+  width: 100%;
+  text-align: center;
+  font-size: 2.6rem;
+  line-height: 1;
+  margin: 4px 0 12px;
+  color: var(--accent);
+}
+
+.rest-bar.paused .rest-time { color: var(--warn); }
+
+.rest-bar.done .rest-time {
+  display: block;
+  width: 100%;
+  text-align: center;
+  font-size: 2rem;
+  line-height: 1.1;
+  margin: 6px 0 14px;
+  color: var(--warn);
+}
+
+.rest-presets {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.rest-presets button {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #12161a;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.rest-presets button.on {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.rest-actions {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.rest-actions .btn { flex: 1; }
+
+.rest-adjust {
+  min-width: 58px;
+  background: #2a3138;
+  color: var(--text);
+}
+
+.btn.hint {
+  animation: rest-hint 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes rest-hint {
+  from { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0.1); }
+  to { box-shadow: 0 0 0 4px rgba(110, 231, 183, 0.35); }
+}
