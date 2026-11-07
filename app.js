@@ -6,12 +6,12 @@ const TEMPLATES = [
     name: "Upper A",
     blurb: "Monday · about 60 min",
     exercises: [
-      { name: "Neutral-grip DB incline press", kind: "reps", shoulder: true },
-      { name: "Chest-supported or machine row", kind: "reps" },
-      { name: "Landmine or single-arm cable press", kind: "reps", shoulder: true },
-      { name: "Lat pulldown or assisted pull-up", kind: "reps" },
-      { name: "Face pulls or rear-delt fly", kind: "reps" },
-      { name: "Dead bug or plank", kind: "flex" }
+      { name: "Neutral-grip DB incline press", kind: "reps", shoulder: true, target: "3 × 8–12", restHint: "90–120s", setsGoal: 3, hint: "30–45°" },
+      { name: "Chest-supported or machine row", kind: "reps", target: "3 × 8–12", restHint: "90–120s", setsGoal: 3 },
+      { name: "Landmine or single-arm cable press", kind: "reps", shoulder: true, target: "3 × 8–12", restHint: "90–120s", setsGoal: 3, hint: "Each side if one-arm" },
+      { name: "Lat pulldown or assisted pull-up", kind: "reps", target: "3 × 8–12", restHint: "90s", setsGoal: 3 },
+      { name: "Face pulls or rear-delt fly", kind: "reps", target: "2 × 12–15", restHint: "60s", setsGoal: 2 },
+      { name: "Dead bug or plank", kind: "flex", target: "Dead bug 2 × 8/side or plank 2 × 30–40s", restHint: "45–60s", setsGoal: 2 }
     ]
   },
   {
@@ -19,14 +19,14 @@ const TEMPLATES = [
     name: "Lower + core",
     blurb: "Saturday · about 60–75 min · no squats",
     exercises: [
-      { name: "Leg press", kind: "reps" },
-      { name: "Romanian deadlift", kind: "reps" },
-      { name: "Bulgarian split squat or reverse lunge", kind: "reps" },
-      { name: "Leg curl", kind: "reps" },
-      { name: "Straight-knee calf raise", kind: "reps" },
-      { name: "Hanging knee raise or captain's chair", kind: "reps", bodyweight: true },
-      { name: "Cable crunch", kind: "reps" },
-      { name: "Side plank", kind: "time", timeLabel: "sec", sided: true, bodyweight: true }
+      { name: "Leg press", kind: "reps", target: "3 × 8–12", restHint: "2 min", setsGoal: 3 },
+      { name: "Romanian deadlift", kind: "reps", target: "3 × 8–12", restHint: "2 min", setsGoal: 3 },
+      { name: "Bulgarian split squat or reverse lunge", kind: "reps", target: "3 × 8–10 each", restHint: "90–120s", setsGoal: 3 },
+      { name: "Leg curl", kind: "reps", target: "2 × 10–15", restHint: "90s", setsGoal: 2 },
+      { name: "Straight-knee calf raise", kind: "reps", target: "2 × 10–15", restHint: "90s", setsGoal: 2 },
+      { name: "Hanging knee raise or captain's chair", kind: "reps", bodyweight: true, target: "8–12", restHint: "45–60s", setsGoal: "2–3", hint: "Core circuit, 2–3 rounds" },
+      { name: "Cable crunch", kind: "reps", target: "10–15", restHint: "45–60s", setsGoal: "2–3", hint: "Core circuit, 2–3 rounds" },
+      { name: "Side plank", kind: "time", timeLabel: "sec", sided: true, bodyweight: true, target: "20–30s each side", restHint: "45–60s", setsGoal: "2–3", hint: "Core circuit, 2–3 rounds" }
     ]
   },
   {
@@ -34,22 +34,37 @@ const TEMPLATES = [
     name: "Upper B",
     blurb: "Sunday · about 60–75 min",
     exercises: [
-      { name: "Neutral-grip machine chest press", kind: "reps", shoulder: true },
-      { name: "One-arm DB or cable row", kind: "reps" },
-      { name: "Face pulls", kind: "reps" },
-      { name: "Lat pulldown (different grip than Monday)", kind: "reps" },
-      { name: "Lateral raise", kind: "reps" },
+      { name: "Neutral-grip machine chest press", kind: "reps", shoulder: true, target: "3 × 8–12", restHint: "90–120s", setsGoal: 3 },
+      { name: "One-arm DB or cable row", kind: "reps", target: "3 × 8–12 each", restHint: "90–120s", setsGoal: 3 },
+      { name: "Face pulls", kind: "reps", target: "3 × 12–15", restHint: "60s", setsGoal: 3 },
+      { name: "Lat pulldown (different grip than Monday)", kind: "reps", target: "3 × 8–12", restHint: "90s", setsGoal: 3 },
+      { name: "Lateral raise", kind: "reps", target: "3 × 12–15", restHint: "60s", setsGoal: 3 },
       {
         name: "Curl + rope pushdown",
         kind: "superset",
-        parts: ["Curl", "Rope pushdown"]
+        parts: ["Curl", "Rope pushdown"],
+        target: "2–3 × 10–15 each",
+        restHint: "90s",
+        setsGoal: "2–3"
       },
       {
         name: "Suitcase hold (in place)",
         kind: "time",
         timeLabel: "sec",
         sided: true,
-        hint: "2 x 30–40 seconds each side, no walking"
+        target: "2 × 30–40s each side",
+        restHint: "45–60s",
+        setsGoal: 2,
+        hint: "No walking"
+      },
+      {
+        name: "Dead bug (extra time)",
+        kind: "flex",
+        bodyweight: true,
+        target: "2 × 8/side",
+        restHint: "45–60s",
+        setsGoal: 2,
+        hint: "If you have extra time"
       }
     ]
   },
@@ -58,11 +73,11 @@ const TEMPLATES = [
     name: "Recovery extras",
     blurb: "Optional Tuesday / Thursday",
     exercises: [
-      { name: "Band pull-aparts", kind: "reps", bodyweight: true },
-      { name: "Face pulls", kind: "reps" },
-      { name: "Dead bugs", kind: "flex", bodyweight: true },
-      { name: "Side planks", kind: "time", timeLabel: "sec", sided: true, bodyweight: true },
-      { name: "Easy bike", kind: "time", timeLabel: "min", bodyweight: true }
+      { name: "Band pull-aparts", kind: "reps", bodyweight: true, target: "2 × 20", restHint: "60s", setsGoal: 2 },
+      { name: "Face pulls", kind: "reps", target: "2 × 15", restHint: "60s", setsGoal: 2 },
+      { name: "Dead bugs", kind: "flex", bodyweight: true, target: "2 × 8/side", restHint: "45–60s", setsGoal: 2 },
+      { name: "Side planks", kind: "time", timeLabel: "sec", sided: true, bodyweight: true, target: "2 × 20–30s", restHint: "45–60s", setsGoal: 2 },
+      { name: "Easy bike", kind: "time", timeLabel: "min", bodyweight: true, target: "10 min if you want" }
     ]
   },
   { id: "custom", name: "Custom", blurb: "Blank session", exercises: [] }
@@ -170,6 +185,17 @@ function templateById(id) {
   return TEMPLATES.find((item) => item.id === id);
 }
 
+function prescriptionFor(session, exercise) {
+  const template = session && templateById(session.templateId);
+  const match = template && (template.exercises || []).find((item) => item.name === exercise.name);
+  return {
+    target: exercise.target || (match && match.target) || "",
+    restHint: exercise.restHint || (match && match.restHint) || "",
+    setsGoal: exercise.setsGoal || (match && match.setsGoal) || "",
+    hint: (match && match.hint) || exercise.hint || ""
+  };
+}
+
 function lastLoggedSet(exerciseName, partName) {
   const finished = db.sessions
     .filter((session) => session.finishedAt)
@@ -245,6 +271,9 @@ function startSession(templateId) {
       timeLabel: exercise.timeLabel || "sec",
       sided: !!exercise.sided,
       hint: exercise.hint || "",
+      target: exercise.target || "",
+      restHint: exercise.restHint || "",
+      setsGoal: exercise.setsGoal == null ? "" : exercise.setsGoal,
       parts: exercise.parts ? exercise.parts.slice() : null,
       exerciseNote: "",
       sets: []
@@ -321,7 +350,8 @@ function sessionSummary(session) {
   ];
   for (const exercise of session.exercises || []) {
     if (!exercise.sets.length) continue;
-    lines.push(exercise.name);
+    const rx = prescriptionFor(session, exercise);
+    lines.push(exercise.name + (rx.target ? " — " + rx.target : ""));
     if (exercise.exerciseNote) lines.push("  note: " + exercise.exerciseNote);
     exercise.sets.forEach((set, index) => {
       let line = "  " + (index + 1) + ") " + formatSetLine(exercise, set);
@@ -841,12 +871,14 @@ function renderSession() {
   `;
   if (saveError) html += `<div class="banner error">${esc(saveError)}</div>`;
   for (const exercise of session.exercises) {
+    const rx = prescriptionFor(session, exercise);
     html += `
       <section class="card ex">
         <div class="ex-head">
           <div>
             <strong class="ex-name">${esc(exercise.name)}</strong>
-            ${exercise.hint ? `<span class="meta">${esc(exercise.hint)}</span>` : ""}
+            ${rx.target ? `<span class="target">${esc(rx.target)}${rx.restHint ? `<span class="target-rest"> · rest ${esc(rx.restHint)}</span>` : ""}</span>` : ""}
+            ${rx.hint ? `<span class="meta">${esc(rx.hint)}</span>` : ""}
           </div>
           <button class="btn danger small" data-act="del-ex" data-ex="${exercise.id}">Remove</button>
         </div>
@@ -854,7 +886,7 @@ function renderSession() {
         ${exercise.sets.map((set, index) => `
           <div class="set">
             <div class="set-top">
-              <span>Set ${index + 1}</span>
+              <span>${rx.setsGoal ? `Set ${index + 1} of ${esc(String(rx.setsGoal))}` : `Set ${index + 1}`}</span>
               <button class="btn danger small" data-act="del-set" data-ex="${exercise.id}" data-set="${set.id}">Delete</button>
             </div>
             ${renderSetControls(exercise, set)}

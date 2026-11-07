@@ -1,4 +1,4 @@
-const VERSION = "lift-log-v2";
+const VERSION = "lift-log-v3";
 const SHELL = [
   "./",
   "./index.html",
